@@ -36,7 +36,8 @@ def image_from_screenshot(): #game_title = 'aether gazer'
     def enum_cb(hwnd, results):
         winlist.append((hwnd, win32gui.GetWindowText(hwnd)))
     win32gui.EnumWindows(enum_cb, toplist)
-    # grab the hwnd for first window matching Aether Gazer (Bluestacks only?)
+    # grab the hwnd for active window and first window matching Aether Gazer (Bluestacks only?)
+    aw = win32gui.GetForegroundWindow()
     ag = [(hwnd, title) for hwnd, title in winlist if game_title in title.lower()]
     # get image from that first window result
     # todo: error check
@@ -47,9 +48,9 @@ def image_from_screenshot(): #game_title = 'aether gazer'
     screenshot = PIL.ImageGrab.grab(bbox)
     imgnp = np.array(screenshot) 
     imgcvt = cv.cvtColor(imgnp, cv.COLOR_BGR2RGB) # convert colour is necessary as PIL and numpy use different format
-    # crop to table
     h, w, _ = imgcvt.shape
     cropped = imgcvt[int(0.245*h):int(0.8*h),int(0.1*w):int(0.85*w)]
+    win32gui.SetForegroundWindow(aw) # return to window
     return cropped
 
 #File Method
@@ -138,8 +139,7 @@ def main():
     close = False
     while not close:
         print("Choose which sheet to save entries into.")
-        print("S for Standard, L for Limited, F for Functor, (X) to close:")
-        i = input()
+        i = input("S for Standard, L for Limited, F for Functor, (X) to close: ")
         i = i.lower()
         if (i == 's') or (i == 'l') or (i == 'f'):
             if i == 's': sname = 'Standard'
@@ -155,13 +155,13 @@ def main():
                 else:
                     print(f"{sname} Sheet Currently Emtpy")
 
+                input("Ready. Press Enter to extract screenshot.")
+                
                 edf = extract_screenshot()
                 print(f"\n=====Extracted Entries=====\n")
                 print(edf[-10:])
 
-                print(f"\nHow many entries to add from extracted screenshot ? Enter number from 1 to {len(edf.index)}")
-                i2 = input()
-                i2 = int(i2)
+                i2 = int(input(f"\nHow many entries to add from extracted screenshot? Enter number from 1 to {len(edf.index)}, (0) to quit: ") or "0")
                 if (i2 > 0) and (i2 <= len(edf.index)):
                     i2 = -i2
                     df[sname] = pd.concat([df[sname],edf[i2:]], ignore_index=True)
@@ -182,17 +182,21 @@ def main():
                         else:
                            df[sname].loc[entry,'A Counter'] = df[sname].loc[entry - 1,'A Counter'] + 1
 
+                    print("Saving entries...\n\n\n")
+                    with pd.ExcelWriter(filename,mode="a",if_sheet_exists="replace") as writer:
+                        df['Limited'].to_excel(writer, sheet_name="Limited", header=True, index=False)
+                        df['Standard'].to_excel(writer, sheet_name="Standard", header=True, index=False)
+                        df['Functor'].to_excel(writer, sheet_name="Functor", header=True, index=False)
+                    
                 else:
                     close2 = True
 
+
         else:
-            print("quitting")
+            print("Closing program...")
             close = True
 
-    with pd.ExcelWriter(filename,mode="a",if_sheet_exists="replace") as writer:
-        df['Limited'].to_excel(writer, sheet_name="Limited", header=True, index=False)
-        df['Standard'].to_excel(writer, sheet_name="Standard", header=True, index=False)
-        df['Functor'].to_excel(writer, sheet_name="Functor", header=True, index=False)
+
             
 if __name__=="__main__":
     main()
