@@ -1,4 +1,4 @@
-import win32gui
+import win32gui, win32com.client
 import pandas as pd
 from PIL import Image
 import PIL.ImageGrab
@@ -37,12 +37,13 @@ def image_from_screenshot(): #game_title = 'aether gazer'
         winlist.append((hwnd, win32gui.GetWindowText(hwnd)))
     win32gui.EnumWindows(enum_cb, toplist)
     # grab the hwnd for active window and first window matching Aether Gazer (Bluestacks only?)
-    aw = win32gui.GetForegroundWindow()
+    aw = win32gui.GetForegroundWindow() # this should be the active terminal
     ag = [(hwnd, title) for hwnd, title in winlist if game_title in title.lower()]
     # get image from that first window result
     # todo: error check
     hwnd = ag[0][0]
     # bring window to foreground and snap
+    win32com.client.Dispatch("WScript.Shell").SendKeys('%') #prevents error: (0, 'SetForegroundWindow', 'No error message is available')
     win32gui.SetForegroundWindow(hwnd)
     bbox = win32gui.GetWindowRect(hwnd)
     screenshot = PIL.ImageGrab.grab(bbox)
@@ -50,6 +51,7 @@ def image_from_screenshot(): #game_title = 'aether gazer'
     imgcvt = cv.cvtColor(imgnp, cv.COLOR_BGR2RGB) # convert colour is necessary as PIL and numpy use different format
     h, w, _ = imgcvt.shape
     cropped = imgcvt[int(0.245*h):int(0.8*h),int(0.1*w):int(0.85*w)]
+    win32com.client.Dispatch("WScript.Shell").SendKeys('%') #prevents error: (0, 'SetForegroundWindow', 'No error message is available')
     win32gui.SetForegroundWindow(aw) # return to window
     return cropped
 
